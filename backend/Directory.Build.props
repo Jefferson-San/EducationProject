@@ -1,0 +1,21 @@
+<Project>
+
+  <!--
+    Aplica-se automaticamente a todo projeto sob esta pasta (src/ e tests/), sem repetir configuração
+    em cada .csproj. Mesmo padrão do LeoFoundation.
+  -->
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>NU1510;NU1903</WarningsNotAsErrors>
+
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!-- CA1716: "Error" conflita com palavra reservada do VB; irrelevante aqui (serviço interno, padrão Result). -->
+    <NoWarn>$(NoWarn);CA1716</NoWarn>
+  </PropertyGroup>
+
+</Project>

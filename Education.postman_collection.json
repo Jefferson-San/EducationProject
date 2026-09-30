@@ -1,0 +1,2551 @@
+{
+  "info": {
+    "_postman_id": "education-platform-ods4",
+    "name": "Education — Plataforma de Educação (ODS 4)",
+    "description": "Collection completa da Education API e do serviço de mídia (HLS).\n\n**Como usar:** importe no Postman (File → Import) e execute as pastas **na ordem** (ou use o *Collection Runner*). Os scripts de teste guardam tokens e ids nas variáveis da collection, então cada requisição usa o resultado da anterior.\n\n**Pré-requisito:** `docker compose up -d --build` na raiz do repositório.\n\n**Variáveis:**\n- `baseUrl` — Education API (padrão `http://localhost:8080`)\n- `mediaUrl` — serviço de mídia/Nginx (padrão `http://localhost:8081`)\n- `internalApiKey` — chave do Worker (`INTERNAL_API_KEY` do `.env`)\n- `teacherToken`, `studentToken`, `courseId`, `lessonId`, `videoId`… — preenchidas automaticamente",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "mediaUrl",
+      "value": "http://localhost:8081"
+    },
+    {
+      "key": "internalApiKey",
+      "value": "dev-only-internal-api-key"
+    },
+    {
+      "key": "teacherEmail",
+      "value": ""
+    },
+    {
+      "key": "studentEmail",
+      "value": ""
+    },
+    {
+      "key": "teacherToken",
+      "value": ""
+    },
+    {
+      "key": "teacherRefreshToken",
+      "value": ""
+    },
+    {
+      "key": "studentToken",
+      "value": ""
+    },
+    {
+      "key": "studentRefreshToken",
+      "value": ""
+    },
+    {
+      "key": "otherTeacherToken",
+      "value": ""
+    },
+    {
+      "key": "courseId",
+      "value": ""
+    },
+    {
+      "key": "lessonId",
+      "value": ""
+    },
+    {
+      "key": "videoId",
+      "value": ""
+    },
+    {
+      "key": "streamingUrl",
+      "value": ""
+    }
+  ],
+  "auth": {
+    "type": "noauth"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "description": "Verificação de disponibilidade da API e do PostgreSQL.",
+      "item": [
+        {
+          "name": "Health check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Retorna `Healthy` quando a API e o banco estão respondendo. Não exige autenticação."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/health",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "health"
+                  ]
+                },
+                "description": "Retorna `Healthy` quando a API e o banco estão respondendo. Não exige autenticação."
+              },
+              "status": "",
+              "code": 200,
+              "_postman_previewlanguage": "text",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "text/plain"
+                }
+              ],
+              "body": "Healthy"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "description": "Cadastro, login e renovação de tokens. O **access token** (JWT) vale 15 minutos e vai no header `Authorization: Bearer <token>`. O **refresh token** vale 7 dias e é trocado a cada uso (rotação).",
+      "item": [
+        {
+          "name": "Cadastrar professor",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('teacherEmail', 'prof.' + Date.now() + '@escola.com');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('teacherToken', body?.accessToken);",
+                  "pm.collectionVariables.set('teacherRefreshToken', body?.refreshToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Cria um usuário e já devolve os tokens (não precisa chamar o login em seguida).\n\n`role`: `Teacher` ou `Student`. O script de pré-requisição gera um e-mail único a cada execução.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ana Souza\",\n  \"email\": \"{{teacherEmail}}\",\n  \"password\": \"Senha@123\",\n  \"role\": \"Teacher\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/auth/register",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "auth",
+                    "register"
+                  ]
+                },
+                "description": "Cria um usuário e já devolve os tokens (não precisa chamar o login em seguida).\n\n`role`: `Teacher` ou `Student`. O script de pré-requisição gera um e-mail único a cada execução.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Ana Souza\",\n  \"email\": \"{{teacherEmail}}\",\n  \"password\": \"Senha@123\",\n  \"role\": \"Teacher\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5…\",\n  \"accessTokenExpiresAt\": \"2026-09-30T14:21:13.2575032Z\",\n  \"refreshToken\": \"HDIqwVcgtNTIXy96klAI-ZZ5…\",\n  \"refreshTokenExpiresAt\": \"2026-10-07T14:06:13.2578011Z\",\n  \"user\": {\n    \"id\": \"9b0d0c49-a7e7-48d0-be13-632fd5fad4bc\",\n    \"name\": \"Ana Souza\",\n    \"email\": \"prof.1790777173092@escola.com\",\n    \"role\": \"Teacher\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Cadastrar aluno",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('studentEmail', 'aluno.' + Date.now() + '@escola.com');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('studentToken', body?.accessToken);",
+                  "pm.collectionVariables.set('studentRefreshToken', body?.refreshToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Mesmo endpoint, com `role: Student`. Alunos só podem consultar cursos e aulas.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Caio Lima\",\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"Senha@123\",\n  \"role\": \"Student\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/auth/register",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "auth",
+                    "register"
+                  ]
+                },
+                "description": "Mesmo endpoint, com `role: Student`. Alunos só podem consultar cursos e aulas.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Caio Lima\",\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"Senha@123\",\n  \"role\": \"Student\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5…\",\n  \"accessTokenExpiresAt\": \"2026-09-30T14:21:13.3538944Z\",\n  \"refreshToken\": \"AOWVRUpPZMESppsmLTps7bM5…\",\n  \"refreshTokenExpiresAt\": \"2026-10-07T14:06:13.3541769Z\",\n  \"user\": {\n    \"id\": \"8c625e1d-b415-44e6-897b-563f5ddd42b0\",\n    \"name\": \"Caio Lima\",\n    \"email\": \"aluno.1790777173092@escola.com\",\n    \"role\": \"Student\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login (professor)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('teacherToken', body?.accessToken);",
+                  "pm.collectionVariables.set('teacherRefreshToken', body?.refreshToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Autentica com e-mail e senha. E-mail inexistente e senha errada retornam a mesma mensagem (401), para não revelar quais e-mails existem.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{teacherEmail}}\",\n  \"password\": \"Senha@123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Autentica com e-mail e senha. E-mail inexistente e senha errada retornam a mesma mensagem (401), para não revelar quais e-mails existem.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{teacherEmail}}\",\n  \"password\": \"Senha@123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5…\",\n  \"accessTokenExpiresAt\": \"2026-09-30T14:21:13.4462691Z\",\n  \"refreshToken\": \"JCfQvbT7cfo--mFs7zrZECQG…\",\n  \"refreshTokenExpiresAt\": \"2026-10-07T14:06:13.4467166Z\",\n  \"user\": {\n    \"id\": \"9b0d0c49-a7e7-48d0-be13-632fd5fad4bc\",\n    \"name\": \"Ana Souza\",\n    \"email\": \"prof.1790777173092@escola.com\",\n    \"role\": \"Teacher\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login (aluno)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('studentToken', body?.accessToken);",
+                  "pm.collectionVariables.set('studentRefreshToken', body?.refreshToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Login do aluno criado acima.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"Senha@123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Login do aluno criado acima.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{studentEmail}}\",\n  \"password\": \"Senha@123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5…\",\n  \"accessTokenExpiresAt\": \"2026-09-30T14:21:13.5427025Z\",\n  \"refreshToken\": \"s-letkcMVJA9gJZBI_k26Zg4…\",\n  \"refreshTokenExpiresAt\": \"2026-10-07T14:06:13.5430142Z\",\n  \"user\": {\n    \"id\": \"8c625e1d-b415-44e6-897b-563f5ddd42b0\",\n    \"name\": \"Caio Lima\",\n    \"email\": \"aluno.1790777173092@escola.com\",\n    \"role\": \"Student\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Renovar token (refresh)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('teacherToken', body?.accessToken);",
+                  "pm.collectionVariables.set('teacherRefreshToken', body?.refreshToken);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "refresh"
+              ]
+            },
+            "description": "Troca o refresh token por um **novo par** de tokens; o refresh token enviado é revogado.\n\nReapresentar um refresh token já usado é tratado como possível vazamento: **todos** os refresh tokens ativos do usuário são revogados (401 `Auth.RefreshTokenReused`).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{teacherRefreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/auth/refresh",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "auth",
+                    "refresh"
+                  ]
+                },
+                "description": "Troca o refresh token por um **novo par** de tokens; o refresh token enviado é revogado.\n\nReapresentar um refresh token já usado é tratado como possível vazamento: **todos** os refresh tokens ativos do usuário são revogados (401 `Auth.RefreshTokenReused`).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"refreshToken\": \"{{teacherRefreshToken}}\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"accessToken\": \"eyJhbGciOiJIUzI1NiIsInR5…\",\n  \"accessTokenExpiresAt\": \"2026-09-30T14:21:13.5635402Z\",\n  \"refreshToken\": \"IToUxUqVcpJVu9iiNpuqwQnI…\",\n  \"refreshTokenExpiresAt\": \"2026-10-07T14:06:13.5637544Z\",\n  \"user\": {\n    \"id\": \"9b0d0c49-a7e7-48d0-be13-632fd5fad4bc\",\n    \"name\": \"Ana Souza\",\n    \"email\": \"prof.1790777173092@escola.com\",\n    \"role\": \"Teacher\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Cursos",
+      "description": "Todo usuário autenticado lista e consulta cursos (MVP sem matrícula). Só `Teacher` cria cursos, e só o professor **dono** do curso cria aulas nele.",
+      "item": [
+        {
+          "name": "Criar curso",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('courseId', body?.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{teacherToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/courses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "courses"
+              ]
+            },
+            "description": "Somente `Teacher`. O professor autenticado passa a ser o dono do curso.\n\nValidação: `title` com 3 a 200 caracteres; `description` opcional, até 4000.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Matemática básica\",\n  \"description\": \"Frações, porcentagem e proporção para o ensino fundamental.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{teacherToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/courses",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "courses"
+                  ]
+                },
+                "description": "Somente `Teacher`. O professor autenticado passa a ser o dono do curso.\n\nValidação: `title` com 3 a 200 caracteres; `description` opcional, até 4000.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Matemática básica\",\n  \"description\": \"Frações, porcentagem e proporção para o ensino fundamental.\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"id\": \"fb9d5a46-9e2c-448c-abf6-70a385ec4943\",\n  \"title\": \"Matemática básica\",\n  \"description\": \"Frações, porcentagem e proporção para o ensino fundamental.\",\n  \"teacherId\": \"9b0d0c49-a7e7-48d0-be13-632fd5fad4bc\",\n  \"teacherName\": \"Ana Souza\",\n  \"createdAt\": \"2026-09-30T14:06:13.572168Z\",\n  \"lessons\": []\n}"
+            }
+          ]
+        },
+        {
+          "name": "Criar aula",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 201', () => pm.response.to.have.status(201));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('lessonId', body?.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{teacherToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/courses/{{courseId}}/lessons",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "courses",
+                "{{courseId}}",
+                "lessons"
+              ]
+            },
+            "description": "Somente o professor dono do curso. `order` é opcional: sem ele, a aula vai para o final do curso.\n\nA aula nasce sem vídeo (`video` ausente na resposta).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Somando frações\",\n  \"description\": \"Frações com denominadores iguais e diferentes.\",\n  \"order\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{teacherToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/courses/{{courseId}}/lessons",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "courses",
+                    "{{courseId}}",
+                    "lessons"
+                  ]
+                },
+                "description": "Somente o professor dono do curso. `order` é opcional: sem ele, a aula vai para o final do curso.\n\nA aula nasce sem vídeo (`video` ausente na resposta).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Somando frações\",\n  \"description\": \"Frações com denominadores iguais e diferentes.\",\n  \"order\": 1\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"id\": \"b71f9841-1bb1-4d36-82b7-58d3c0fe6019\",\n  \"courseId\": \"fb9d5a46-9e2c-448c-abf6-70a385ec4943\",\n  \"title\": \"Somando frações\",\n  \"description\": \"Frações com denominadores iguais e diferentes.\",\n  \"order\": 1\n}"
+            }
+          ]
+        },
+        {
+          "name": "Listar cursos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{studentToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/courses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "courses"
+              ]
+            },
+            "description": "Lista todos os cursos, do mais recente para o mais antigo, com o nome do professor e a quantidade de aulas."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{studentToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/courses",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "courses"
+                  ]
+                },
+                "description": "Lista todos os cursos, do mais recente para o mais antigo, com o nome do professor e a quantidade de aulas."
+              },
+              "status": "",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "[\n  {\n    \"id\": \"fb9d5a46-9e2c-448c-abf6-70a385ec4943\",\n    \"title\": \"Matemática básica\",\n    \"description\": \"Frações, porcentagem e proporção para o ensino fundamental.\",\n    \"teacherId\": \"9b0d0c49-a7e7-48d0-be13-632fd5fad4bc\",\n    \"teacherName\": \"Ana Souza\",\n    \"lessonCount\": 1,\n    \"createdAt\": \"2026-09-30T14:06:13.572168Z\"\n  },\n  {\n    \"id\": \"571bf8e2-f682-4038-b04b-0e4ddc8d57cf\",\n    \"title\": \"Matemática básica\",\n    \"description\": \"Frações, porcentagem e proporção para o ensino fundamental.\",\n    \"teacherId\": \"0bf7f6fc-344a-4cdb-a4e8-b2b56b174929\",\n    \"teacherName\": \"Ana Souza\",\n    \"lessonCount\": 1,\n    \"createdAt\": \"2026-09-30T14:05:26.428125Z\"\n  },\n  {\n    \"id\": \"d8cf98ab-489b-44f2-8baf-fbca96165bcc\",\n    \"title\": \"Matemática básica\",\n    \"description\": \"Frações, porcentagem e proporção para o ensino fundamental.\",\n    \"teacherId\": \"ba2da57e-74a9-41f8-b33e-ff267c596f69\",\n    \"teacherName\": \"Ana Souza\",\n    \"lessonCount\": 1,\n    \"createdAt\": \"2026-09-30T14:05:12.763712Z\"\n  },\n  {\n    \"id\": \"a2598576-2a13-4fef-8070-931b778ac8b7\",\n    \"title\": \"Matemática básica\",\n    \"description\": \"Frações, porcentagem e proporção para o ensino fundamental.\",\n    \"teacherId\": \"784f96f8-440a-4353-8e94-4fa4d69036a4\",\n    \"teacherName\": \"Ana Souza\",\n    \"lessonCount\": 1,\n    \"createdAt\": \"2026-09-30T14:04:28.312101Z\"\n  },\n  {\n    \"id\": \"02b1cab4-face-428a-bc80-18234b77539e\",\n    \"title\": \"Matemática 1\",\n    \"description\": \"Curso de matemática\",\n    \"teacherId\": \"63e96a61-494b-43a1-80f7-28ed727b67bc\",\n    \"teacherName\": \"jefferson\",\n    \"lessonCount\": 1,\n    \"createdAt\": \"2026-09-30T12:50:31.80665Z\"\n  },\n  {\n    \"id\": \"682eee4c-01ce-4034-aea9-f0e471640428\",\n    \"title\": \"Teste fila fora\",\n    \"teacherId\": \"be5b70f7-fb7b-4715-8526-0460b9dadebf\",\n    \"teacherName\": \"Prof Fila\",\n    \"lessonCount\": 1,\n    \"createdAt\": \"2026-09-29T21:46:34.071981Z\"\n  },\n  {\n    \"id\": \"f77bf198-520b-4b48-9682-cef48e417864\",\n    \"title\": \"Curso com vídeos reais\",\n    \"teacherId\": \"a82e1d09-75ed-4d6f-ab33-f502f2c3ab20\",\n    \"teacherName\": \"Prof Video\",\n    \"lessonCount\": 4,\n    \"createdAt\": \"2026-09-29T21:46:02.813783Z\"\n  },\n  {\n    \"id\": \"f248d7eb-d1da-422b-acb4-0c5f37a0eb6f\",\n    \"title\": \"Matemática básica\",\n    \"description\": \"Frações\",\n    \"teacherId\": \"b6a08442-6d91-4989-bb77-8714c46cb564\",\n    \"teacherName\": \"Prof Ana\",\n    \"lessonCount\": 2,\n    \"createdAt\": \"2026-09-29T21:45:35.315446Z\"\n  }\n]"
+            }
+          ]
+        },
+        {
+          "name": "Obter curso",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{studentToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/courses/{{courseId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "courses",
+                "{{courseId}}"
+              ]
+            },
+            "description": "Curso com as aulas em ordem. Cada aula traz `videoStatus` (ausente quando a aula ainda não tem vídeo), útil para marcar \"em processamento\" na lista."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{studentToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/courses/{{courseId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "courses",
+                    "{{courseId}}"
+                  ]
+                },
+                "description": "Curso com as aulas em ordem. Cada aula traz `videoStatus` (ausente quando a aula ainda não tem vídeo), útil para marcar \"em processamento\" na lista."
+              },
+              "status": "",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"id\": \"fb9d5a46-9e2c-448c-abf6-70a385ec4943\",\n  \"title\": \"Matemática básica\",\n  \"description\": \"Frações, porcentagem e proporção para o ensino fundamental.\",\n  \"teacherId\": \"9b0d0c49-a7e7-48d0-be13-632fd5fad4bc\",\n  \"teacherName\": \"Ana Souza\",\n  \"createdAt\": \"2026-09-30T14:06:13.572168Z\",\n  \"lessons\": [\n    {\n      \"id\": \"b71f9841-1bb1-4d36-82b7-58d3c0fe6019\",\n      \"title\": \"Somando frações\",\n      \"description\": \"Frações com denominadores iguais e diferentes.\",\n      \"order\": 1\n    }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Aulas e vídeos",
+      "description": "Upload do vídeo da aula e acompanhamento do processamento. Cada aula tem no máximo um vídeo; um novo upload substitui o anterior (exceto enquanto ele está em `Processing`).\n\nCiclo de vida do vídeo: `Uploaded` → `Processing` → `Processed` (ou `Failed`).",
+      "item": [
+        {
+          "name": "Enviar vídeo da aula",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 202', () => pm.response.to.have.status(202));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('videoId', body?.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{teacherToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/lessons/{{lessonId}}/video",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "lessons",
+                "{{lessonId}}",
+                "video"
+              ]
+            },
+            "description": "Somente o professor dono do curso. `multipart/form-data` com o campo **`file`** (apenas `.mp4`, até 500 MB).\n\nNo Postman: aba **Body → form-data**, selecione o arquivo no campo `file`.\n\nResponde **202 Accepted**: o vídeo foi salvo e enviado para processamento, que acontece de forma assíncrona no Worker (FFmpeg → HLS 360p/480p/720p). Acompanhe pelo **Obter aula**.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Arquivo .mp4 (até 500 MB)"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "202 Accepted",
+              "originalRequest": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{teacherToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/lessons/{{lessonId}}/video",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "lessons",
+                    "{{lessonId}}",
+                    "video"
+                  ]
+                },
+                "description": "Somente o professor dono do curso. `multipart/form-data` com o campo **`file`** (apenas `.mp4`, até 500 MB).\n\nNo Postman: aba **Body → form-data**, selecione o arquivo no campo `file`.\n\nResponde **202 Accepted**: o vídeo foi salvo e enviado para processamento, que acontece de forma assíncrona no Worker (FFmpeg → HLS 360p/480p/720p). Acompanhe pelo **Obter aula**.",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": [],
+                      "description": "Arquivo .mp4 (até 500 MB)"
+                    }
+                  ]
+                }
+              },
+              "status": "",
+              "code": 202,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"id\": \"4e217fc3-6797-422d-98e7-558f0656aa48\",\n  \"status\": \"Uploaded\",\n  \"createdAt\": \"2026-09-30T14:06:13.7205365Z\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Obter aula (acompanhar processamento)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "const body = pm.response.json();",
+                  "pm.collectionVariables.set('streamingUrl', body?.video?.streamingUrl);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{studentToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/lessons/{{lessonId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "lessons",
+                "{{lessonId}}"
+              ]
+            },
+            "description": "Aula com o vídeo. Use em **polling** (a cada ~3 s) enquanto `video.status` for `Uploaded` ou `Processing`.\n\nQuando `Processed`, `video.streamingUrl` traz a URL absoluta do `master.m3u8` no **serviço de mídia** (Nginx, porta 8081), que é o que o player (hls.js) recebe. Em `Failed`, `video.failureReason` explica o motivo."
+          },
+          "response": [
+            {
+              "name": "Vídeo em processamento",
+              "originalRequest": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{studentToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/lessons/{{lessonId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "lessons",
+                    "{{lessonId}}"
+                  ]
+                },
+                "description": "Aula com o vídeo. Use em **polling** (a cada ~3 s) enquanto `video.status` for `Uploaded` ou `Processing`.\n\nQuando `Processed`, `video.streamingUrl` traz a URL absoluta do `master.m3u8` no **serviço de mídia** (Nginx, porta 8081), que é o que o player (hls.js) recebe. Em `Failed`, `video.failureReason` explica o motivo."
+              },
+              "status": "",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"id\": \"b71f9841-1bb1-4d36-82b7-58d3c0fe6019\",\n  \"courseId\": \"fb9d5a46-9e2c-448c-abf6-70a385ec4943\",\n  \"title\": \"Somando frações\",\n  \"description\": \"Frações com denominadores iguais e diferentes.\",\n  \"order\": 1,\n  \"video\": {\n    \"id\": \"4e217fc3-6797-422d-98e7-558f0656aa48\",\n    \"status\": \"Uploaded\",\n    \"createdAt\": \"2026-09-30T14:06:13.720536Z\"\n  }\n}"
+            },
+            {
+              "name": "Vídeo pronto",
+              "originalRequest": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{studentToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/lessons/{{lessonId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "lessons",
+                    "{{lessonId}}"
+                  ]
+                },
+                "description": "Aula com o vídeo. Use em **polling** (a cada ~3 s) enquanto `video.status` for `Uploaded` ou `Processing`.\n\nQuando `Processed`, `video.streamingUrl` traz a URL absoluta do `master.m3u8` no **serviço de mídia** (Nginx, porta 8081), que é o que o player (hls.js) recebe. Em `Failed`, `video.failureReason` explica o motivo."
+              },
+              "status": "",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"id\": \"b71f9841-1bb1-4d36-82b7-58d3c0fe6019\",\n  \"courseId\": \"fb9d5a46-9e2c-448c-abf6-70a385ec4943\",\n  \"title\": \"Somando frações\",\n  \"description\": \"Frações com denominadores iguais e diferentes.\",\n  \"order\": 1,\n  \"video\": {\n    \"id\": \"4e217fc3-6797-422d-98e7-558f0656aa48\",\n    \"status\": \"Processed\",\n    \"streamingUrl\": \"http://localhost:8081/processed/4e217fc3-6797-422d-98e7-558f0656aa48/master.m3u8\",\n    \"durationSeconds\": 20,\n    \"createdAt\": \"2026-09-30T14:06:13.720536Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Master playlist HLS (serviço de mídia)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{mediaUrl}}/processed/{{videoId}}/master.m3u8",
+              "host": [
+                "{{mediaUrl}}"
+              ],
+              "path": [
+                "processed",
+                "{{videoId}}",
+                "master.m3u8"
+              ]
+            },
+            "description": "Servido pelo **Nginx** (container `media`), não pela API. Público na fase 1 (o `videoId` é um GUID não adivinhável).\n\nLista as qualidades geradas; o player escolhe uma conforme a conexão e baixa `<qualidade>/playlist.m3u8` e depois os segmentos `.ts` de ~6 s."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{mediaUrl}}/processed/{{videoId}}/master.m3u8",
+                  "host": [
+                    "{{mediaUrl}}"
+                  ],
+                  "path": [
+                    "processed",
+                    "{{videoId}}",
+                    "master.m3u8"
+                  ]
+                },
+                "description": "Servido pelo **Nginx** (container `media`), não pela API. Público na fase 1 (o `videoId` é um GUID não adivinhável).\n\nLista as qualidades geradas; o player escolhe uma conforme a conexão e baixa `<qualidade>/playlist.m3u8` e depois os segmentos `.ts` de ~6 s."
+              },
+              "status": "",
+              "code": 200,
+              "_postman_previewlanguage": "text",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/vnd.apple.mpegurl"
+                }
+              ],
+              "body": "#EXTM3U\n#EXT-X-VERSION:6\n#EXT-X-STREAM-INF:BANDWIDTH=985600,RESOLUTION=640x360,CODECS=\"avc1.64001e,mp4a.40.2\"\n360p/playlist.m3u8\n\n#EXT-X-STREAM-INF:BANDWIDTH=1680800,RESOLUTION=854x480,CODECS=\"avc1.64001f,mp4a.40.2\"\n480p/playlist.m3u8\n\n#EXT-X-STREAM-INF:BANDWIDTH=3220800,RESOLUTION=1280x720,CODECS=\"avc1.64001f,mp4a.40.2\"\n720p/playlist.m3u8\n\n"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Interno (Worker)",
+      "description": "Chamados **apenas pelo Video Processing Worker**, autenticados pelo header `X-Internal-Api-Key` (não aceitam o JWT de usuário). Não aparecem no OpenAPI.\n\nEstão aqui para depuração: com o Worker rodando, o vídeo já estará `Processed`, então estas chamadas devolvem 409 (a transição não é permitida), que é o comportamento de idempotência esperado.",
+      "item": [
+        {
+          "name": "Iniciar processamento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Internal-Api-Key",
+                "value": "{{internalApiKey}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/internal/videos/{{videoId}}/processing/start?redelivered=false",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "internal",
+                "videos",
+                "{{videoId}}",
+                "processing",
+                "start"
+              ],
+              "query": [
+                {
+                  "key": "redelivered",
+                  "value": "false"
+                }
+              ]
+            },
+            "description": "`Uploaded`/`Failed` → `Processing`. Retorna **204** quando o Worker pode processar.\n\n**409** quando o vídeo já foi processado ou já está em processamento (mensagem duplicada): o Worker descarta a mensagem. Com `redelivered=true` (a fila reentregou a mensagem porque o Worker anterior caiu), `Processing` também é aceito.\n\n**404** se o vídeo não existe mais (substituído pelo professor antes do processamento)."
+          },
+          "response": [
+            {
+              "name": "409 Conflict",
+              "originalRequest": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Internal-Api-Key",
+                    "value": "{{internalApiKey}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/internal/videos/{{videoId}}/processing/start?redelivered=false",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "internal",
+                    "videos",
+                    "{{videoId}}",
+                    "processing",
+                    "start"
+                  ],
+                  "query": [
+                    {
+                      "key": "redelivered",
+                      "value": "false"
+                    }
+                  ]
+                },
+                "description": "`Uploaded`/`Failed` → `Processing`. Retorna **204** quando o Worker pode processar.\n\n**409** quando o vídeo já foi processado ou já está em processamento (mensagem duplicada): o Worker descarta a mensagem. Com `redelivered=true` (a fila reentregou a mensagem porque o Worker anterior caiu), `Processing` também é aceito.\n\n**404** se o vídeo não existe mais (substituído pelo professor antes do processamento)."
+              },
+              "status": "",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 409,\n  \"message\": \"Não é possível iniciar o processamento: o vídeo está Processed.\",\n  \"code\": \"Video.InvalidTransition\"\n}"
+            },
+            {
+              "name": "Iniciado",
+              "originalRequest": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Internal-Api-Key",
+                    "value": "{{internalApiKey}}"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/internal/videos/{{videoId}}/processing/start?redelivered=false",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "internal",
+                    "videos",
+                    "{{videoId}}",
+                    "processing",
+                    "start"
+                  ],
+                  "query": [
+                    {
+                      "key": "redelivered",
+                      "value": "false"
+                    }
+                  ]
+                },
+                "description": "`Uploaded`/`Failed` → `Processing`. Retorna **204** quando o Worker pode processar.\n\n**409** quando o vídeo já foi processado ou já está em processamento (mensagem duplicada): o Worker descarta a mensagem. Com `redelivered=true` (a fila reentregou a mensagem porque o Worker anterior caiu), `Processing` também é aceito.\n\n**404** se o vídeo não existe mais (substituído pelo professor antes do processamento)."
+              },
+              "status": "",
+              "code": 204,
+              "_postman_previewlanguage": "text",
+              "header": [],
+              "body": ""
+            }
+          ]
+        },
+        {
+          "name": "Concluir processamento",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Internal-Api-Key",
+                "value": "{{internalApiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/internal/videos/{{videoId}}/processing/complete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "internal",
+                "videos",
+                "{{videoId}}",
+                "processing",
+                "complete"
+              ]
+            },
+            "description": "`Processing` → `Processed`. `streamingPath` precisa ser exatamente `processed/{videoId}/master.m3u8` (422 caso contrário).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"streamingPath\": \"processed/{{videoId}}/master.m3u8\",\n  \"durationSeconds\": 20\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "409 Conflict",
+              "originalRequest": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Internal-Api-Key",
+                    "value": "{{internalApiKey}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/internal/videos/{{videoId}}/processing/complete",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "internal",
+                    "videos",
+                    "{{videoId}}",
+                    "processing",
+                    "complete"
+                  ]
+                },
+                "description": "`Processing` → `Processed`. `streamingPath` precisa ser exatamente `processed/{videoId}/master.m3u8` (422 caso contrário).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"streamingPath\": \"processed/{{videoId}}/master.m3u8\",\n  \"durationSeconds\": 20\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 409,\n  \"message\": \"Não é possível concluir o processamento: o vídeo está Processed.\",\n  \"code\": \"Video.InvalidTransition\"\n}"
+            },
+            {
+              "name": "Concluído",
+              "originalRequest": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Internal-Api-Key",
+                    "value": "{{internalApiKey}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/internal/videos/{{videoId}}/processing/complete",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "internal",
+                    "videos",
+                    "{{videoId}}",
+                    "processing",
+                    "complete"
+                  ]
+                },
+                "description": "`Processing` → `Processed`. `streamingPath` precisa ser exatamente `processed/{videoId}/master.m3u8` (422 caso contrário).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"streamingPath\": \"processed/{{videoId}}/master.m3u8\",\n  \"durationSeconds\": 20\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "",
+              "code": 204,
+              "_postman_previewlanguage": "text",
+              "header": [],
+              "body": ""
+            }
+          ]
+        },
+        {
+          "name": "Registrar falha",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-Internal-Api-Key",
+                "value": "{{internalApiKey}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/internal/videos/{{videoId}}/processing/fail",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "internal",
+                "videos",
+                "{{videoId}}",
+                "processing",
+                "fail"
+              ]
+            },
+            "description": "`Processing` → `Failed`, guardando o motivo (até 1000 caracteres) que o professor verá em `video.failureReason`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"FFmpeg falhou (código 1): Invalid data found when processing input\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "409 Conflict",
+              "originalRequest": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Internal-Api-Key",
+                    "value": "{{internalApiKey}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/internal/videos/{{videoId}}/processing/fail",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "internal",
+                    "videos",
+                    "{{videoId}}",
+                    "processing",
+                    "fail"
+                  ]
+                },
+                "description": "`Processing` → `Failed`, guardando o motivo (até 1000 caracteres) que o professor verá em `video.failureReason`.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"FFmpeg falhou (código 1): Invalid data found when processing input\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 409,\n  \"message\": \"Não é possível registrar falha no processamento: o vídeo está Processed.\",\n  \"code\": \"Video.InvalidTransition\"\n}"
+            },
+            {
+              "name": "Falha registrada",
+              "originalRequest": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "X-Internal-Api-Key",
+                    "value": "{{internalApiKey}}"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/internal/videos/{{videoId}}/processing/fail",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "internal",
+                    "videos",
+                    "{{videoId}}",
+                    "processing",
+                    "fail"
+                  ]
+                },
+                "description": "`Processing` → `Failed`, guardando o motivo (até 1000 caracteres) que o professor verá em `video.failureReason`.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"reason\": \"FFmpeg falhou (código 1): Invalid data found when processing input\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "",
+              "code": 204,
+              "_postman_previewlanguage": "text",
+              "header": [],
+              "body": ""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Exemplos de erro",
+      "description": "Todas as respostas de erro seguem o formato `{ statusCode, message, code }`.",
+      "item": [
+        {
+          "name": "401 — sem token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 401', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/courses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "courses"
+              ]
+            },
+            "description": "Rotas protegidas sem `Authorization: Bearer`, ou com token inválido/expirado."
+          },
+          "response": [
+            {
+              "name": "401 Unauthorized",
+              "originalRequest": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/courses",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "courses"
+                  ]
+                },
+                "description": "Rotas protegidas sem `Authorization: Bearer`, ou com token inválido/expirado."
+              },
+              "status": "",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 401,\n  \"message\": \"Token ausente, inválido ou expirado.\",\n  \"code\": \"Auth.Unauthorized\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "403 — aluno tentando criar curso",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{studentToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/courses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "courses"
+              ]
+            },
+            "description": "Usuário autenticado, mas sem a role exigida (`Teacher`).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Curso do aluno\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "403 Forbidden",
+              "originalRequest": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{studentToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/courses",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "courses"
+                  ]
+                },
+                "description": "Usuário autenticado, mas sem a role exigida (`Teacher`).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Curso do aluno\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 403,\n  \"message\": \"Você não tem permissão para esta ação.\",\n  \"code\": \"Auth.Forbidden\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "403 — aula em curso de outro professor",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 403', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{otherTeacherToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/courses/{{courseId}}/lessons",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "courses",
+                "{{courseId}}",
+                "lessons"
+              ]
+            },
+            "description": "É `Teacher`, mas não é o dono do curso (regra do agregado `Course.AddLesson`). Para reproduzir, cadastre outro professor e use o token dele em `otherTeacherToken`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Aula intrusa\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "403 Forbidden",
+              "originalRequest": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{otherTeacherToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/courses/{{courseId}}/lessons",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "courses",
+                    "{{courseId}}",
+                    "lessons"
+                  ]
+                },
+                "description": "É `Teacher`, mas não é o dono do curso (regra do agregado `Course.AddLesson`). Para reproduzir, cadastre outro professor e use o token dele em `otherTeacherToken`.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Aula intrusa\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "",
+              "code": 403,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 403,\n  \"message\": \"Somente o professor dono do curso pode criar aulas.\",\n  \"code\": \"Course.NotOwner\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "404 — curso inexistente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 404', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{studentToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/courses/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "courses",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            },
+            "description": "Recurso não encontrado."
+          },
+          "response": [
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{studentToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/courses/00000000-0000-0000-0000-000000000000",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "courses",
+                    "00000000-0000-0000-0000-000000000000"
+                  ]
+                },
+                "description": "Recurso não encontrado."
+              },
+              "status": "",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 404,\n  \"message\": \"Curso não encontrado.\",\n  \"code\": \"Course.NotFound\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "409 — e-mail já cadastrado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 409', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Conflito com o estado atual (e-mail duplicado, vídeo em processamento, transição inválida).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Ana Souza\",\n  \"email\": \"{{teacherEmail}}\",\n  \"password\": \"Senha@123\",\n  \"role\": \"Teacher\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "409 Conflict",
+              "originalRequest": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/auth/register",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "auth",
+                    "register"
+                  ]
+                },
+                "description": "Conflito com o estado atual (e-mail duplicado, vídeo em processamento, transição inválida).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Ana Souza\",\n  \"email\": \"{{teacherEmail}}\",\n  \"password\": \"Senha@123\",\n  \"role\": \"Teacher\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 409,\n  \"message\": \"Já existe um usuário com este e-mail.\",\n  \"code\": \"User.EmailAlreadyExists\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "422 — validação",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Regras dos validators (FluentValidation). As mensagens de todos os campos inválidos vêm juntas em `message`, separadas por `;`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"A\",\n  \"email\": \"email-invalido\",\n  \"password\": \"123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "422 Unprocessable Entity",
+              "originalRequest": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/auth/register",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "auth",
+                    "register"
+                  ]
+                },
+                "description": "Regras dos validators (FluentValidation). As mensagens de todos os campos inválidos vêm juntas em `message`, separadas por `;`.",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"A\",\n  \"email\": \"email-invalido\",\n  \"password\": \"123\"\n}",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 422,\n  \"message\": \"Nome deve ter entre 2 e 150 caracteres.; E-mail inválido.; Senha deve ter entre 8 e 128 caracteres.; Perfil (role) é obrigatório: Teacher ou Student.\",\n  \"code\": \"Validation.Failed\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "422 — arquivo que não é .mp4",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{teacherToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/v1/lessons/{{lessonId}}/video",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "lessons",
+                "{{lessonId}}",
+                "video"
+              ]
+            },
+            "description": "O upload aceita somente `.mp4` de até 500 MB. Acima de 500 MB a resposta é **413** (`Request.TooLarge`).",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Arquivo .mp4 (até 500 MB)"
+                }
+              ]
+            }
+          },
+          "response": [
+            {
+              "name": "422 Unprocessable Entity",
+              "originalRequest": {
+                "auth": {
+                  "type": "bearer",
+                  "bearer": [
+                    {
+                      "key": "token",
+                      "value": "{{teacherToken}}",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "method": "POST",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/lessons/{{lessonId}}/video",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "lessons",
+                    "{{lessonId}}",
+                    "video"
+                  ]
+                },
+                "description": "O upload aceita somente `.mp4` de até 500 MB. Acima de 500 MB a resposta é **413** (`Request.TooLarge`).",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": [],
+                      "description": "Arquivo .mp4 (até 500 MB)"
+                    }
+                  ]
+                }
+              },
+              "status": "",
+              "code": 422,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 422,\n  \"message\": \"Apenas arquivos .mp4 são aceitos.\",\n  \"code\": \"Validation.Failed\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "400 — JSON malformado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 400', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/v1/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Corpo que não é um JSON válido, ou valor inválido para um enum (ex.: `\"role\": \"Admin\"`).",
+            "body": {
+              "mode": "raw",
+              "raw": "{ \"email\": \"ana@escola.com\", ",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [
+            {
+              "name": "400 Bad Request",
+              "originalRequest": {
+                "auth": {
+                  "type": "noauth"
+                },
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/v1/auth/login",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "v1",
+                    "auth",
+                    "login"
+                  ]
+                },
+                "description": "Corpo que não é um JSON válido, ou valor inválido para um enum (ex.: `\"role\": \"Admin\"`).",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{ \"email\": \"ana@escola.com\", ",
+                  "options": {
+                    "raw": {
+                      "language": "json"
+                    }
+                  }
+                }
+              },
+              "status": "",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json; charset=utf-8"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 400,\n  \"message\": \"A requisição não pôde ser interpretada: Failed to read parameter \\\"LoginCommand command\\\" from the request body as JSON.\",\n  \"code\": \"Request.Invalid\"\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,6 @@
+# Resposta ao preflight CORS (OPTIONS). Incluído dentro de cada location que serve arquivos.
+if ($request_method = OPTIONS) {
+    include /etc/nginx/conf.d/cors.inc;
+    add_header Access-Control-Max-Age 86400 always;
+    return 204;
+}

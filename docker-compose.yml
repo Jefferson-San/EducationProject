@@ -1,0 +1,101 @@
+name: education-platform
+
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-education}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432" # 5433 no host para não conflitar com outro Postgres local
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+      # Uma conversão longa segura a mensagem sem ack; o padrão (30 min) derrubaria o canal do Worker.
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: "-rabbit consumer_timeout 7200000"
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # painel de gerenciamento
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  education-api:
+    build:
+      context: ./backend
+      dockerfile: src/Education.API/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${POSTGRES_DB:-education};Username=${POSTGRES_USER:-postgres};Password=${POSTGRES_PASSWORD:-postgres};Gss Encryption Mode=Disable
+      RabbitMq__HostName: rabbitmq
+      RabbitMq__UserName: ${RABBITMQ_USER:-guest}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-guest}
+      Jwt__SigningKey: ${JWT_SIGNING_KEY:-dev-only-signing-key-troque-em-producao-0123456789}
+      InternalApi__Key: ${INTERNAL_API_KEY:-dev-only-internal-api-key}
+      Storage__RootPath: /videos
+      Storage__PublicBaseUrl: ${MEDIA_PUBLIC_URL:-http://localhost:8081}
+      Cors__AllowedOrigins__0: ${FRONTEND_ORIGIN:-http://localhost:3000}
+    ports:
+      - "8080:8080"
+    volumes:
+      - video-storage:/videos
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+  video-processing:
+    build:
+      context: ./backend
+      dockerfile: src/VideoProcessing/Dockerfile
+    environment:
+      DOTNET_ENVIRONMENT: Development
+      RabbitMq__HostName: rabbitmq
+      RabbitMq__UserName: ${RABBITMQ_USER:-guest}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-guest}
+      EducationApi__BaseUrl: http://education-api:8080
+      InternalApi__Key: ${INTERNAL_API_KEY:-dev-only-internal-api-key}
+      Storage__RootPath: /videos
+    volumes:
+      - video-storage:/videos
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      education-api:
+        condition: service_started
+
+  # Serve os arquivos HLS direto do volume. Separado da API para o streaming não disputar recursos com ela.
+  media:
+    image: nginx:stable-alpine
+    environment:
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:3000}
+    ports:
+      - "${MEDIA_PORT:-8081}:80"
+    volumes:
+      - video-storage:/videos:ro
+      - ./media/templates:/etc/nginx/templates:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # frontend: será adicionado quando a stack (provavelmente Next.js) for definida.
+
+volumes:
+  postgres-data:
+  video-storage:
