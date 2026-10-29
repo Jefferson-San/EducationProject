@@ -23,7 +23,7 @@ public sealed class CreateCourseCommandHandler : IRequestHandler<CreateCourseCom
 
     public async Task<Result<CourseDetailDto>> Handle(CreateCourseCommand request, CancellationToken cancellationToken)
     {
-        var course = Course.Create(request.TeacherId, request.Title, request.Description);
+        var course = Course.Create(request.TeacherId, request.Title, request.Description, request.Category!.Value);
 
         await _courses.AddAsync(course, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

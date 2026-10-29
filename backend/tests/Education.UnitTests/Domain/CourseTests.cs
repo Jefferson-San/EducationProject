@@ -11,7 +11,7 @@ public class CourseTests
     [Fact]
     public void AddLesson_ShouldBeForbidden_WhenRequesterIsNotTheOwner()
     {
-        var course = Course.Create(Teacher, "Frações", null);
+        var course = Course.Create(Teacher, "Frações", null, CourseCategory.Matematica);
 
         var result = course.AddLesson(Guid.NewGuid(), "Aula intrusa", null, null);
 
@@ -23,7 +23,7 @@ public class CourseTests
     [Fact]
     public void AddLesson_WithoutOrder_ShouldGoToTheEnd()
     {
-        var course = Course.Create(Teacher, "Frações", null);
+        var course = Course.Create(Teacher, "Frações", null, CourseCategory.Matematica);
 
         course.AddLesson(Teacher, "Introdução", null, null).Value.Order.Should().Be(1);
         course.AddLesson(Teacher, "Avançado", null, 10).Value.Order.Should().Be(10);
@@ -33,7 +33,7 @@ public class CourseTests
     [Fact]
     public void Create_ShouldTrimTexts_AndTreatBlankDescriptionAsNull()
     {
-        var course = Course.Create(Teacher, "  Matemática  ", "   ");
+        var course = Course.Create(Teacher, "  Matemática  ", "   ", CourseCategory.Matematica);
 
         course.Title.Should().Be("Matemática");
         course.Description.Should().BeNull();

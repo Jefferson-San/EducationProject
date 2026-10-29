@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using Education.Application.Courses.Commands;
 using Education.Application.Courses.Queries;
+using Education.Domain.Entities.Courses;
 using Education.CrossCutting.Authentication;
 using Education.CrossCutting.Extensions;
 using MediatR;
@@ -16,14 +17,15 @@ public static class CoursesEndpoints
             .RequireAuthorization();
 
         group.MapGet("/", async (
+            CourseCategory? category,
             IMediator mediator,
             CancellationToken ct) =>
         {
-            var result = await mediator.Send(new GetCoursesQuery(), ct);
+            var result = await mediator.Send(new GetCoursesQuery(category), ct);
             return result.ToApiResult();
         })
         .WithName("ListarCursos")
-        .WithSummary("Lista todos os cursos (MVP sem matrícula)");
+        .WithSummary("Lista os cursos. Filtro opcional: ?category=Matematica");
 
         group.MapGet("/{id:guid}", async (
             Guid id,
@@ -43,7 +45,7 @@ public static class CoursesEndpoints
             CancellationToken ct) =>
         {
             var result = await mediator.Send(
-                new CreateCourseCommand(user.GetUserId(), request.Title, request.Description), ct);
+                new CreateCourseCommand(user.GetUserId(), request.Title, request.Description, request.Category), ct);
 
             return result.IsSuccess
                 ? Results.Created($"/v1/courses/{result.Value.Id}", result.Value)
@@ -75,6 +77,7 @@ public static class CoursesEndpoints
     }
 }
 
-public sealed record CreateCourseRequest(string Title, string? Description);
+/// <param name="Category">Anulável para que a ausência no JSON vire erro de validação (e não a primeira categoria do enum).</param>
+public sealed record CreateCourseRequest(string Title, string? Description, CourseCategory? Category);
 
 public sealed record CreateLessonRequest(string Title, string? Description, int? Order);

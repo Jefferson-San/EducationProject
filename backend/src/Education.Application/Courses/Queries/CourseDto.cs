@@ -1,3 +1,4 @@
+using Education.Domain.Entities.Courses;
 using Education.Domain.Entities.Videos;
 
 namespace Education.Application.Courses.Queries;
@@ -7,6 +8,7 @@ public sealed record CourseSummaryDto(
     Guid Id,
     string Title,
     string? Description,
+    CourseCategory Category,
     Guid TeacherId,
     string TeacherName,
     int LessonCount,
@@ -17,6 +19,7 @@ public sealed record CourseDetailDto(
     Guid Id,
     string Title,
     string? Description,
+    CourseCategory Category,
     Guid TeacherId,
     string TeacherName,
     DateTime CreatedAt,

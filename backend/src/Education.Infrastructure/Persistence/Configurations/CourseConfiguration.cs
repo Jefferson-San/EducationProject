@@ -16,6 +16,7 @@ public class CourseConfiguration : IEntityTypeConfiguration<Course>
         builder.Property(x => x.Id).HasColumnName("id").ValueGeneratedNever();
         builder.Property(x => x.Title).HasColumnName("title").HasMaxLength(200).IsRequired();
         builder.Property(x => x.Description).HasColumnName("description").HasMaxLength(4000);
+        builder.Property(x => x.Category).HasColumnName("category").HasConversion<string>().HasMaxLength(30).IsRequired();
         builder.Property(x => x.TeacherId).HasColumnName("teacher_id");
         builder.Property(x => x.CreatedAt).HasColumnName("created_at");
 

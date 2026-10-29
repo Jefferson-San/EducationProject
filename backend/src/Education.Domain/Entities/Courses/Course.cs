@@ -9,6 +9,7 @@ public class Course : AggregateRoot
 
     public string Title { get; private set; } = default!;
     public string? Description { get; private set; }
+    public CourseCategory Category { get; private set; }
     public Guid TeacherId { get; private set; }
     public DateTime CreatedAt { get; private set; }
 
@@ -16,9 +17,10 @@ public class Course : AggregateRoot
 
     private Course() { }
 
-    public static Course Create(Guid teacherId, string title, string? description) => new()
+    public static Course Create(Guid teacherId, string title, string? description, CourseCategory category) => new()
     {
         TeacherId = teacherId,
+        Category = category,
         Title = title.Trim(),
         Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim(),
         CreatedAt = DateTime.UtcNow

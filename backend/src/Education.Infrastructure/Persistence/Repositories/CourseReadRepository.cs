@@ -1,4 +1,5 @@
 using Education.Application.Courses.Queries;
+using Education.Domain.Entities.Courses;
 using Education.Domain.Entities.Videos;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,15 +12,17 @@ public class CourseReadRepository : ICourseReadRepository
 
     public CourseReadRepository(AppDbContext context) => _context = context;
 
-    public async Task<IReadOnlyCollection<CourseSummaryDto>> GetAllAsync(CancellationToken cancellationToken = default) =>
+    public async Task<IReadOnlyCollection<CourseSummaryDto>> GetAllAsync(CourseCategory? category, CancellationToken cancellationToken = default) =>
         await (
             from course in _context.Courses.AsNoTracking()
             join teacher in _context.Users on course.TeacherId equals teacher.Id
+            where category == null || course.Category == category
             orderby course.CreatedAt descending
             select new CourseSummaryDto(
                 course.Id,
                 course.Title,
                 course.Description,
+                course.Category,
                 course.TeacherId,
                 teacher.Name,
                 course.Lessons.Count,
@@ -35,6 +38,7 @@ public class CourseReadRepository : ICourseReadRepository
                 course.Id,
                 course.Title,
                 course.Description,
+                course.Category,
                 course.TeacherId,
                 teacher.Name,
                 course.CreatedAt,

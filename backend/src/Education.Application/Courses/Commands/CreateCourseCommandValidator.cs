@@ -10,6 +10,10 @@ public sealed class CreateCourseCommandValidator : AbstractValidator<CreateCours
             .NotEmpty().WithMessage("Título é obrigatório.")
             .Length(3, 200).WithMessage("Título deve ter entre 3 e 200 caracteres.");
 
+        RuleFor(x => x.Category)
+            .NotNull().WithMessage("Categoria é obrigatória.")
+            .IsInEnum().WithMessage("Categoria inválida.");
+
         RuleFor(x => x.Description)
             .MaximumLength(4000).WithMessage("Descrição deve ter no máximo 4000 caracteres.");
     }
