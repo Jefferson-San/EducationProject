@@ -1550,5 +1550,13 @@ Estrutura do repositório:
 
 ## 26.11 Ainda em aberto
 
-* **Frontend:** provavelmente Next.js; player com `hls.js`.
-* **Refresh token no cliente:** `localStorage` ou cookie `httpOnly` (a API hoje devolve no corpo da resposta).
+* Nada em aberto no momento.
+
+## 26.12 Frontend (implementado)
+
+* **Next.js 16** (App Router, TypeScript) + **hls.js**, container `frontend` na porta 3000.
+* Funciona como SPA: as páginas são Client Components que chamam a API direto do navegador com o JWT.
+* **Tokens no `localStorage`** (decisão do MVP, mais simples que cookie `httpOnly`; o risco é XSS ler o token). Em 401, o cliente faz **um** refresh (compartilhado entre requisições simultâneas, por causa da rotação) e repete a chamada; se o refresh falhar, volta para o login.
+* Polling a cada 3 s em `GET /v1/lessons/{id}` enquanto o vídeo está `Uploaded`/`Processing`. Upload com barra de progresso (XMLHttpRequest).
+* Player com seletor de qualidade (Automática/360p/480p/720p); Safari usa HLS nativo.
+* Com `cacheComponents`, o Next **preserva páginas visitadas escondidas** (React Activity): o login limpa os campos ao ser escondido, e o **Sair recarrega a página inteira** para nada do usuário anterior ficar no navegador (computador compartilhado).

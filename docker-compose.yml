@@ -94,7 +94,17 @@ services:
       timeout: 5s
       retries: 5
 
-  # frontend: será adicionado quando a stack (provavelmente Next.js) for definida.
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # URL da API vista pelo navegador do usuário (não o nome do container).
+        NEXT_PUBLIC_API_URL: ${API_PUBLIC_URL:-http://localhost:8080}
+    ports:
+      - "3000:3000"
+    depends_on:
+      education-api:
+        condition: service_started
 
 volumes:
   postgres-data:

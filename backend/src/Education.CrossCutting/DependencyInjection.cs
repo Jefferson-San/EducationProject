@@ -15,6 +15,14 @@ public static class DependencyInjection
     public static IServiceCollection AddCrossCutting(
         this IServiceCollection services, IConfiguration configuration)
     {
+        AddJWTBearer(services, configuration);
+        AddCors(services, configuration);
+
+        return services;
+    }
+
+    private static void AddJWTBearer(this IServiceCollection services, IConfiguration configuration)
+    {
         var jwt = configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>() ?? new JwtOptions();
         jwt.Validate();
 
@@ -67,6 +75,18 @@ public static class DependencyInjection
                 .AddAuthenticationSchemes(InternalApiKeyAuthenticationHandler.SchemeName)
                 .RequireAuthenticatedUser());
 
-        return services;
+    }
+
+    public static void AddCors(this IServiceCollection service, IConfiguration configuration)
+    {
+        var corsAllowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+        service.AddCors(options =>
+        {
+            // Política padrão: é a que o app.UseCors() (sem nome) aplica no Program.cs.
+            options.AddDefaultPolicy(policy =>
+                policy.WithOrigins(corsAllowedOrigins)
+                    .WithHeaders("Content-Type", "Authorization")
+                    .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE"));
+        });
     }
 }

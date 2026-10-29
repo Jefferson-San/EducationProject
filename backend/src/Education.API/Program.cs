@@ -30,16 +30,6 @@ builder.Services
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<AppDbContext>();
 
-const string CorsPolicyName = "Frontend";
-var corsAllowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(CorsPolicyName, policy =>
-        policy.WithOrigins(corsAllowedOrigins)
-            .WithHeaders("Content-Type", "Authorization")
-            .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE"));
-});
-
 var app = builder.Build();
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
@@ -54,7 +44,7 @@ if (app.Environment.IsDevelopment())
     await db.Database.MigrateAsync();
 }
 
-app.UseCors(CorsPolicyName);
+app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 

@@ -8,6 +8,7 @@ Especificação completa: [especificacoes.md](especificacoes.md).
 
 | Serviço | Tecnologia | Porta no host |
 |---|---|---|
+| `frontend` | Next.js 16 + hls.js | http://localhost:3000 |
 | `education-api` | ASP.NET Core (.NET 10) | http://localhost:8080 (Swagger em `/swagger`) |
 | `video-processing` | .NET Worker + FFmpeg (converte .mp4 em HLS 360p/480p/720p) | — |
 | `media` | Nginx (serve o HLS do volume, somente leitura) | http://localhost:8081 |
