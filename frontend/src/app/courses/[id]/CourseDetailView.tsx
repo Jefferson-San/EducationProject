@@ -7,6 +7,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { RequireAuth } from "@/components/RequireAuth";
 import { StatusBadge } from "@/components/StatusBadge";
 import { api, ApiError } from "@/lib/api";
+import { categoryLabel } from "@/lib/categories";
 import { useApiData } from "@/lib/useApiData";
 import type { CourseDetail, Lesson } from "@/lib/types";
 
@@ -37,7 +38,9 @@ function Course() {
       <div className="page-header">
         <div>
           <h1>{course.title}</h1>
-          <p className="muted">Prof. {course.teacherName}</p>
+          <p className="muted">
+            <span className="tag tag-category">{categoryLabel(course.category)}</span> Prof. {course.teacherName}
+          </p>
         </div>
       </div>
       {course.description && <p className="lead">{course.description}</p>}

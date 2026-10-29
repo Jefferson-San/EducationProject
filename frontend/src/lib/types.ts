@@ -17,12 +17,22 @@ export interface AuthResponse {
   user: User;
 }
 
+export type CourseCategory =
+  | "Matematica"
+  | "Ciencias"
+  | "Portugues"
+  | "Historia"
+  | "Geografia"
+  | "Artes"
+  | "Outros";
+
 export type VideoStatus = "Uploaded" | "Processing" | "Processed" | "Failed";
 
 export interface CourseSummary {
   id: string;
   title: string;
   description?: string;
+  category: CourseCategory;
   teacherId: string;
   teacherName: string;
   lessonCount: number;
@@ -41,6 +51,7 @@ export interface CourseDetail {
   id: string;
   title: string;
   description?: string;
+  category: CourseCategory;
   teacherId: string;
   teacherName: string;
   createdAt: string;
