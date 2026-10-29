@@ -4,7 +4,7 @@
 
 ## 1. Contexto do projeto
 
-Projeto de hackathon baseado no **ODS 4 — Educação de Qualidade**, com foco em oferecer uma plataforma educacional que permita a professores disponibilizarem conteúdos em vídeo para estudantes.
+Projeto baseado no **ODS 4 — Educação de Qualidade**, com foco em oferecer uma plataforma educacional que permita a professores disponibilizarem conteúdos em vídeo para estudantes.
 
 O principal diferencial técnico do projeto será o **processamento e streaming de vídeos utilizando HLS**, com processamento assíncrono através de um microserviço dedicado.
 
@@ -38,7 +38,6 @@ Aluno acessa a aula
 Player reproduz o vídeo
 ```
 
-O projeto deve ser mantido propositalmente simples, pois existe um prazo de aproximadamente **8 dias para desenvolvimento**.
 
 ---
 
