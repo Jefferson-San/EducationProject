@@ -700,7 +700,7 @@
             "description": "Somente `Teacher`. O professor autenticado passa a ser o dono do curso.\n\nValidação: `title` com 3 a 200 caracteres; `description` opcional, até 4000.",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Matemática básica\",\n  \"description\": \"Frações, porcentagem e proporção para o ensino fundamental.\"\n}",
+              "raw": "{\n  \"title\": \"Matemática básica\",\n  \"description\": \"Frações, porcentagem e proporção para o ensino fundamental.\",\n  \"category\": \"Matematica\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -953,7 +953,8 @@
               ],
               "body": "[\n  {\n    \"id\": \"fb9d5a46-9e2c-448c-abf6-70a385ec4943\",\n    \"title\": \"Matemática básica\",\n    \"description\": \"Frações, porcentagem e proporção para o ensino fundamental.\",\n    \"teacherId\": \"9b0d0c49-a7e7-48d0-be13-632fd5fad4bc\",\n    \"teacherName\": \"Ana Souza\",\n    \"lessonCount\": 1,\n    \"createdAt\": \"2026-09-30T14:06:13.572168Z\"\n  },\n  {\n    \"id\": \"571bf8e2-f682-4038-b04b-0e4ddc8d57cf\",\n    \"title\": \"Matemática básica\",\n    \"description\": \"Frações, porcentagem e proporção para o ensino fundamental.\",\n    \"teacherId\": \"0bf7f6fc-344a-4cdb-a4e8-b2b56b174929\",\n    \"teacherName\": \"Ana Souza\",\n    \"lessonCount\": 1,\n    \"createdAt\": \"2026-09-30T14:05:26.428125Z\"\n  },\n  {\n    \"id\": \"d8cf98ab-489b-44f2-8baf-fbca96165bcc\",\n    \"title\": \"Matemática básica\",\n    \"description\": \"Frações, porcentagem e proporção para o ensino fundamental.\",\n    \"teacherId\": \"ba2da57e-74a9-41f8-b33e-ff267c596f69\",\n    \"teacherName\": \"Ana Souza\",\n    \"lessonCount\": 1,\n    \"createdAt\": \"2026-09-30T14:05:12.763712Z\"\n  },\n  {\n    \"id\": \"a2598576-2a13-4fef-8070-931b778ac8b7\",\n    \"title\": \"Matemática básica\",\n    \"description\": \"Frações, porcentagem e proporção para o ensino fundamental.\",\n    \"teacherId\": \"784f96f8-440a-4353-8e94-4fa4d69036a4\",\n    \"teacherName\": \"Ana Souza\",\n    \"lessonCount\": 1,\n    \"createdAt\": \"2026-09-30T14:04:28.312101Z\"\n  },\n  {\n    \"id\": \"02b1cab4-face-428a-bc80-18234b77539e\",\n    \"title\": \"Matemática 1\",\n    \"description\": \"Curso de matemática\",\n    \"teacherId\": \"63e96a61-494b-43a1-80f7-28ed727b67bc\",\n    \"teacherName\": \"jefferson\",\n    \"lessonCount\": 1,\n    \"createdAt\": \"2026-09-30T12:50:31.80665Z\"\n  },\n  {\n    \"id\": \"682eee4c-01ce-4034-aea9-f0e471640428\",\n    \"title\": \"Teste fila fora\",\n    \"teacherId\": \"be5b70f7-fb7b-4715-8526-0460b9dadebf\",\n    \"teacherName\": \"Prof Fila\",\n    \"lessonCount\": 1,\n    \"createdAt\": \"2026-09-29T21:46:34.071981Z\"\n  },\n  {\n    \"id\": \"f77bf198-520b-4b48-9682-cef48e417864\",\n    \"title\": \"Curso com vídeos reais\",\n    \"teacherId\": \"a82e1d09-75ed-4d6f-ab33-f502f2c3ab20\",\n    \"teacherName\": \"Prof Video\",\n    \"lessonCount\": 4,\n    \"createdAt\": \"2026-09-29T21:46:02.813783Z\"\n  },\n  {\n    \"id\": \"f248d7eb-d1da-422b-acb4-0c5f37a0eb6f\",\n    \"title\": \"Matemática básica\",\n    \"description\": \"Frações\",\n    \"teacherId\": \"b6a08442-6d91-4989-bb77-8714c46cb564\",\n    \"teacherName\": \"Prof Ana\",\n    \"lessonCount\": 2,\n    \"createdAt\": \"2026-09-29T21:45:35.315446Z\"\n  }\n]"
             }
-          ]
+          ],
+          "description": "Lista os cursos. Filtro opcional com ?category= (Matematica, Ciencias, Portugues, Historia, Geografia, Artes, Outros)."
         },
         {
           "name": "Obter curso",
@@ -1900,7 +1901,7 @@
             "description": "Usuário autenticado, mas sem a role exigida (`Teacher`).",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"title\": \"Curso do aluno\"\n}",
+              "raw": "{\n  \"title\": \"Curso do aluno\",\n  \"category\": \"Matematica\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

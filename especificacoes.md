@@ -1493,9 +1493,9 @@ Cenários testados: 720p com áudio, 480p sem áudio (sem upscale), retrato, arq
 | POST | `/v1/auth/login` | público |
 | POST | `/v1/auth/refresh` | público (com refresh token) |
 | POST | `/v1/auth/logout` | autenticado |
-| GET | `/v1/courses` | autenticado |
+| GET | `/v1/courses?category=` | autenticado (filtro opcional por categoria) |
 | GET | `/v1/courses/{id}` (com aulas) | autenticado |
-| POST | `/v1/courses` | Teacher |
+| POST | `/v1/courses` (campo `category` obrigatório) | Teacher |
 | POST | `/v1/courses/{courseId}/lessons` | Teacher dono do curso |
 | GET | `/v1/lessons/{id}` (com status e URL do vídeo) | autenticado |
 | POST | `/v1/lessons/{lessonId}/video` | Teacher dono do curso |
@@ -1550,6 +1550,12 @@ Estrutura do repositório:
 ## 26.11 Ainda em aberto
 
 * Nada em aberto no momento.
+
+## 26.11b Categorias de curso
+
+* O professor escolhe a categoria ao criar o curso: `Matematica`, `Ciencias`, `Portugues`, `Historia`, `Geografia`, `Artes` ou `Outros` (enum fixo, evita categorias duplicadas por grafia).
+* A lista de cursos tem filtro por categoria (`?category=`). Os cursos criados antes da mudança receberam `Outros` na migration `AddCourseCategory`.
+* Valores do filtro são sensíveis a maiúsculas (`Matematica`, não `matematica`); valor inválido responde 400.
 
 ## 26.12 Frontend (implementado)
 
